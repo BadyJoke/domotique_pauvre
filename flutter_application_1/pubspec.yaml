@@ -38,7 +38,7 @@ dependencies:
   english_words: ^4.0.0
   flutter_feather_icons: ^2.0.0+1
   flutter_mjpeg: ^2.0.1
-  firebase_database: ^9.0.16
+  retry: ^3.1.0
 
 dev_dependencies:
   flutter_test:

@@ -1,19 +1,33 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
+import 'package:retry/retry.dart';
 
+void main() async {
+  Socket camera = await Socket.connect("192.168.181.79", 80,
+      timeout: const Duration(seconds: 1));
+  Socket sock = await Socket.connect("192.168.181.202", 80);
+  runApp(MyApp(sock, camera));
+}
 
-
-var isRunning = true;
-
-
-void main() {
-  runApp(const MyApp());
+awakeCamera() async {
+  Socket camera = await retry(
+    () => Socket.connect("192.168.181.79", 80,
+        timeout: const Duration(seconds: 1)),
+    retryIf: (e) => e is SocketException || e is TimeoutException,
+  );
+  camera.write("AWAKE\n");
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Socket socket;
+  final Socket cameraSocket;
+
+  const MyApp(this.socket, this.cameraSocket, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +49,9 @@ class MyApp extends StatelessWidget {
         ),
         body: Column(
           children: [
-            Text1Section(),
-            CameraSection(),
-            ButtonSection(),
+            const Text1Section(),
+            CameraSection(cameraSocket),
+            ButtonSection(socket),
           ],
         ),
       ),
@@ -69,8 +83,43 @@ class Text1Section extends StatelessWidget {
   }
 }
 
-class CameraSection extends StatelessWidget {
-  const CameraSection({Key? key}) : super(key: key);
+class CameraSection extends StatefulWidget {
+  final Socket cameraSocket;
+  const CameraSection(this.cameraSocket, {Key? key}) : super(key: key);
+
+  @override
+  State<CameraSection> createState() => _CameraSectionState();
+}
+
+class _CameraSectionState extends State<CameraSection>
+    with WidgetsBindingObserver {
+  bool isRunning = true;
+  String buttonLabel = "On";
+
+  changeText() {
+    setState(() {
+      if (isRunning) {
+        buttonLabel = "On";
+      }
+      if (!isRunning) {
+        buttonLabel = "Off";
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    widget.cameraSocket.write("SLEEP");
+    WidgetsBinding.instance.removeObserver(this);
+
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,10 +127,23 @@ class CameraSection extends StatelessWidget {
       height: 400,
       color: Colors.grey[600],
       child: Column(
-        children: const <Widget> [
+        children: <Widget>[
           Expanded(
-            child: Center(
-              child: Mjpeg(isLive: true, stream:'https://www.twitch.tv/otplol_'),))
+              child: Center(
+            child: Mjpeg(
+                isLive: isRunning, stream: 'http://192.168.181.79:81/stream'),
+          )),
+          TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.all(16.0),
+                primary: Colors.white,
+                textStyle: const TextStyle(fontSize: 25),
+              ),
+              onPressed: () {
+                isRunning = !isRunning;
+                changeText();
+              },
+              child: Text(buttonLabel))
         ],
       ),
     );
@@ -89,7 +151,9 @@ class CameraSection extends StatelessWidget {
 }
 
 class ButtonSection extends StatelessWidget {
-  const ButtonSection({Key? key}) : super(key: key);
+  final Socket channel;
+
+  const ButtonSection(this.channel, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +168,7 @@ class ButtonSection extends StatelessWidget {
             backgroundColor: Colors.grey[200],
             foregroundColor: Colors.black,
             onPressed: () {
-              // que fait le bouton?
+              _down(channel);
             },
             child: const Icon(FeatherIcons.minus),
           ),
@@ -112,7 +176,7 @@ class ButtonSection extends StatelessWidget {
             backgroundColor: Colors.grey[200],
             foregroundColor: Colors.black,
             onPressed: () {
-              // que fait le bouton?
+              _up(channel);
             },
             child: const Icon(FeatherIcons.plus),
           )
@@ -120,4 +184,14 @@ class ButtonSection extends StatelessWidget {
       ),
     );
   }
+}
+
+_up(Socket s) {
+  print("UP");
+  s.write("UP\n");
+}
+
+_down(Socket s) {
+  print("DOWN");
+  s.write("DOWN\n");
 }
