@@ -29,6 +29,23 @@ class _CameraSectionState extends State<CameraSection>
     super.dispose();
   }
 
+  Widget handleErrorWidget(context, error, stack) {
+    String errorMessage = "";
+    
+    return Center(
+      child: Column(
+        children: [
+          Text(error.toString(), style: const TextStyle(color: Colors.red)),
+          IconButton(
+              onPressed: () {
+                setState(() {});
+              },
+              icon: const Icon(Icons.reset_tv))
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -39,19 +56,16 @@ class _CameraSectionState extends State<CameraSection>
           Expanded(
               child: Center(
             child: Mjpeg(
+                key: UniqueKey(),
                 isLive: isRunning,
                 error: (context, error, stack) {
                   return handleErrorWidget(context, error, stack);
                 },
-                stream: 'http://${widget.cameraSocket.address.address}:81/stream'),
+                stream:
+                    'http://${widget.cameraSocket.address.address}:81/stream'),
           )),
         ],
       ),
     );
   }
-}
-
-Widget handleErrorWidget(context, error, stack){
-
-  return Text(error.toString(), style: const TextStyle(color: Colors.red));
 }

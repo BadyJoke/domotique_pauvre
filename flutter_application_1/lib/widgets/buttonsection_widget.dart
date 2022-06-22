@@ -3,11 +3,17 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:http/http.dart' as http;
 
+/// Create a row of 4 [FloatingActionButton] and takes a [Socket] as parameter.
+/// 
+/// Buttons on press action is alredy defined.
+// ignore: must_be_immutable
 class ButtonSection extends StatelessWidget {
   final Socket channel;
+  http.Client client = http.Client();
 
-  const ButtonSection(this.channel, {Key? key}) : super(key: key);
+  ButtonSection(this.channel, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -63,13 +69,13 @@ class ButtonSection extends StatelessWidget {
     if (kDebugMode) {
       print("UP");
     }
-    channel.write("UP\n");
+    client.get(Uri.parse("http://${channel.address.address}/control?var=UP&val=0"));
 
     Future.delayed(time, () {
       if (kDebugMode) {
         print("END");
       }
-      channel.write("END\n");
+      client.get(Uri.parse("http://${channel.address.address}/control?var=END&val=0"));
     });
   }
 
@@ -77,13 +83,13 @@ class ButtonSection extends StatelessWidget {
     if (kDebugMode) {
       print("DOWN");
     }
-    channel.write("DOWN\n");
+    client.get(Uri.parse("http://${channel.address.address}/control?var=DOWN&val=0"));
 
     Future.delayed(time, () {
       if (kDebugMode) {
         print("END");
       }
-      channel.write("END\n");
+     client.get(Uri.parse("http://${channel.address.address}/control?var=END&val=0"));
     });
   }
 }

@@ -1,4 +1,4 @@
-# flutter_application_1
+# Promotic
 
 A new Flutter project.
 

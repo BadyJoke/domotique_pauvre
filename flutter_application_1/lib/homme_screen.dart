@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:retry/retry.dart';
@@ -37,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
       () => Socket.connect(ip, port, timeout: timeout),
       retryIf: (e) => e is SocketException || e is TimeoutException,
       maxAttempts: 10,
+
     );
 
     return camera;
@@ -50,11 +50,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     arduino = connectTo(80, const Duration(seconds: 1));
+
+    arduino.then((socket) => socket.write("AWAKE\n"));
   }
 
   @override
   dispose() {
-    arduino.then((value) => value.destroy());
+    arduino.then((socket) => socket.write("SLEEP\n"));
+    arduino.then((socket) => socket.destroy());
     super.dispose();
   }
 
@@ -65,19 +68,20 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       arduino = connectTo(80, const Duration(seconds: 1));
+      arduino.then((socket) => socket.write("AWAKE\n"));
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Domotic',
+      title: 'Promotic',
       home: Scaffold(
           appBar: AppBar(
             elevation: 2,
             backgroundColor: Colors.grey[200],
             foregroundColor: Colors.black,
-            title: const Text('Domotic'),
+            title: const Text('Promotic'),
             centerTitle: true,
             actions: [
               IconButton(
