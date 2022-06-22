@@ -8,19 +8,21 @@ import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 import 'package:retry/retry.dart';
 
 void main() async {
-  Socket camera = await Socket.connect("192.168.181.79", 80,
-      timeout: const Duration(seconds: 1));
-  Socket sock = await Socket.connect("192.168.181.202", 80);
+  Socket camera =
+      await Socket.connect("8.8.8.8", 80, timeout: const Duration(seconds: 1));
+  Socket sock =
+      await Socket.connect("8.8.8.8", 80, timeout: const Duration(seconds: 1));
   runApp(MyApp(sock, camera));
 }
 
-awakeCamera() async {
+Future<Socket> connectTo(String ip, int port, Duration timeout) async {
   Socket camera = await retry(
-    () => Socket.connect("192.168.181.79", 80,
-        timeout: const Duration(seconds: 1)),
+    () => Socket.connect(ip, port, timeout: timeout),
     retryIf: (e) => e is SocketException || e is TimeoutException,
+    maxAttempts: 10,
   );
-  camera.write("AWAKE\n");
+
+  return camera;
 }
 
 class MyApp extends StatelessWidget {
@@ -39,7 +41,7 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.grey[200],
           title: Text(
             'Domotic',
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.openSans(
               color: Colors.black,
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -71,8 +73,8 @@ class Text1Section extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              "Retour Caméra",
-              style: GoogleFonts.nunito(
+              "Caméra",
+              style: GoogleFonts.openSans(
                 color: Colors.black,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -94,18 +96,6 @@ class CameraSection extends StatefulWidget {
 class _CameraSectionState extends State<CameraSection>
     with WidgetsBindingObserver {
   bool isRunning = true;
-  String buttonLabel = "On";
-
-  changeText() {
-    setState(() {
-      if (isRunning) {
-        buttonLabel = "On";
-      }
-      if (!isRunning) {
-        buttonLabel = "Off";
-      }
-    });
-  }
 
   @override
   void initState() {
@@ -115,7 +105,7 @@ class _CameraSectionState extends State<CameraSection>
 
   @override
   void dispose() {
-    widget.cameraSocket.write("SLEEP");
+    widget.cameraSocket.write("SLEEP\n");
     WidgetsBinding.instance.removeObserver(this);
 
     super.dispose();
@@ -133,17 +123,6 @@ class _CameraSectionState extends State<CameraSection>
             child: Mjpeg(
                 isLive: isRunning, stream: 'http://192.168.181.79:81/stream'),
           )),
-          TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.all(16.0),
-                primary: Colors.white,
-                textStyle: const TextStyle(fontSize: 25),
-              ),
-              onPressed: () {
-                isRunning = !isRunning;
-                changeText();
-              },
-              child: Text(buttonLabel))
         ],
       ),
     );
@@ -168,30 +147,56 @@ class ButtonSection extends StatelessWidget {
             backgroundColor: Colors.grey[200],
             foregroundColor: Colors.black,
             onPressed: () {
-              _down(channel);
+              _down(channel, const Duration(seconds: 5));
             },
-            child: const Icon(FeatherIcons.minus),
+            child: const Icon(FeatherIcons.chevronsLeft),
           ),
           FloatingActionButton(
             backgroundColor: Colors.grey[200],
             foregroundColor: Colors.black,
             onPressed: () {
-              _up(channel);
+              _down(channel, const Duration(seconds: 1));
             },
-            child: const Icon(FeatherIcons.plus),
-          )
+            child: const Icon(FeatherIcons.chevronLeft),
+          ),
+          FloatingActionButton(
+            backgroundColor: Colors.grey[200],
+            foregroundColor: Colors.black,
+            onPressed: () {
+              _up(channel, const Duration(seconds: 1));
+            },
+            child: const Icon(FeatherIcons.chevronRight),
+          ),
+          FloatingActionButton(
+            backgroundColor: Colors.grey[200],
+            foregroundColor: Colors.black,
+            onPressed: () {
+              _up(channel, const Duration(seconds: 5));
+            },
+            child: const Icon(FeatherIcons.chevronsRight),
+          ),
         ],
       ),
     );
   }
 }
 
-_up(Socket s) {
+_up(Socket s, Duration time) {
   print("UP");
   s.write("UP\n");
+
+  Future.delayed(time, () {
+    print("END");
+    s.write("END\n");
+  });
 }
 
-_down(Socket s) {
+_down(Socket s, Duration time) {
   print("DOWN");
   s.write("DOWN\n");
+
+  Future.delayed(time, () {
+    print("END");
+    s.write("END\n");
+  });
 }
