@@ -7,27 +7,33 @@ import 'settings.dart';
 import 'widgets/camera_widget.dart';
 import 'widgets/buttonsection_widget.dart';
 
-class HomeScreen extends StatelessWidget {
-  final Socket arduino;
+class HomeScreen extends StatefulWidget {
+  late Socket arduino;
 
-  const HomeScreen(this.arduino, {Key? key}) : super(key: key);
+  HomeScreen(this.arduino, {Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  setSocket(Socket s) {
+    setState(() {
+      widget.arduino = s;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    print(widget.arduino);
     return MaterialApp(
       title: 'Domotic',
       home: Scaffold(
         appBar: AppBar(
           elevation: 2,
           backgroundColor: Colors.grey[200],
-          title: Text(
-            'Domotic',
-            style: GoogleFonts.openSans(
-              color: Colors.black,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          foregroundColor: Colors.black,
+          title: const Text('Domotic'),
           centerTitle: true,
           actions: [
             IconButton(
@@ -36,7 +42,7 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const OptionMenu()),
+                  MaterialPageRoute(builder: (context) => OptionMenu(context)),
                 );
               },
             )
@@ -45,8 +51,8 @@ class HomeScreen extends StatelessWidget {
         body: Column(
           children: [
             const TextSection(),
-            CameraSection(arduino),
-            ButtonSection(arduino),
+            CameraSection(widget.arduino),
+            ButtonSection(widget.arduino),
           ],
         ),
       ),
