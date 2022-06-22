@@ -39,10 +39,19 @@ class _CameraSectionState extends State<CameraSection>
           Expanded(
               child: Center(
             child: Mjpeg(
-                isLive: isRunning, stream: 'http://192.168.181.79:81/stream'),
+                isLive: isRunning,
+                error: (context, error, stack) {
+                  return handleErrorWidget(context, error, stack);
+                },
+                stream: 'http://${widget.cameraSocket.address.address}:81/stream'),
           )),
         ],
       ),
     );
   }
+}
+
+Widget handleErrorWidget(context, error, stack){
+
+  return Text(error.toString(), style: const TextStyle(color: Colors.red));
 }

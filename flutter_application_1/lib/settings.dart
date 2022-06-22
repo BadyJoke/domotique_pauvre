@@ -15,7 +15,6 @@ class _OptionMenuState extends State<OptionMenu> {
   final ipController = TextEditingController();
 
   Future<void> _saveIp() async {
-    print("saving ip :" + ipController.text);
     final SharedPreferences prefs = await _prefs;
     prefs.setString("ip", ipController.text);
   }
@@ -23,7 +22,6 @@ class _OptionMenuState extends State<OptionMenu> {
   @override
   void initState() {
     super.initState();
-    print("INIT STATE");
     _ip = _prefs.then((SharedPreferences prefs) {
       return prefs.getString("ip");
     });
