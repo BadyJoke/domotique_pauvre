@@ -30,18 +30,24 @@ class _CameraSectionState extends State<CameraSection>
   }
 
   Widget handleErrorWidget(context, error, stack) {
-    String errorMessage = "";
-    
-    return Center(
-      child: Column(
-        children: [
-          Text(error.toString(), style: const TextStyle(color: Colors.red)),
-          IconButton(
-              onPressed: () {
-                setState(() {});
-              },
-              icon: const Icon(Icons.reset_tv))
-        ],
+    return Expanded(
+      child: Center(
+        child: Column(
+          children: [
+            const Text(
+              "Error. please retry connection whth the button bellow",
+              style: TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            IconButton(
+                onPressed: () {
+                  setState(() {});
+                },
+                iconSize: 32.0,
+                color: Colors.white,
+                icon: const Icon(Icons.reset_tv))
+          ],
+        ),
       ),
     );
   }
