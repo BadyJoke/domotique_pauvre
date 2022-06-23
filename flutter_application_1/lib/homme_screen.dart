@@ -9,19 +9,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'settings.dart';
 import 'widgets/camera_widget.dart';
 import 'widgets/buttonsection_widget.dart';
+import 'package:http/http.dart' as http;
 
-class HomeScreen extends StatefulWidget {
-  HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget with WidgetsBindingObserver {
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
   late Future<String?> _ip;
 
   late Future<Socket> arduino;
+  http.Client client = http.Client();
 
   Future<Socket> connectTo(int port, Duration timeout) {
     late Future<Socket> camera;
@@ -32,12 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    camera = retry(
-      () => Socket.connect(ip, port, timeout: timeout),
-      retryIf: (e) => e is SocketException || e is TimeoutException,
-      maxAttempts: 10,
+    camera = retry(() => Socket.connect(ip, port, timeout: timeout),
+        retryIf: (e) => e is SocketException || e is TimeoutException,
+        maxAttempts: 20,
+        delayFactor: const Duration(milliseconds: 500),
+        maxDelay: const Duration(seconds: 10));
 
-    );
+    camera.then((sock) => client.get(
+        Uri.parse("http://${sock.address.address}/control?var=AWAKE&val=0")));
 
     return camera;
   }
@@ -50,15 +54,30 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     arduino = connectTo(80, const Duration(seconds: 1));
-
-    arduino.then((socket) => socket.write("AWAKE\n"));
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   dispose() {
-    arduino.then((socket) => socket.write("SLEEP\n"));
+    WidgetsBinding.instance.removeObserver(this);
+    arduino.then((socket) => client.get(
+        Uri.parse("http://${socket.address.address}/control?var=SLEEP&val=0")));
     arduino.then((socket) => socket.destroy());
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      print("PAUSED");
+      arduino.then((socket) => client.get(Uri.parse(
+          "http://${socket.address.address}/control?var=SLEEP&val=0")));
+    }
+    if (state == AppLifecycleState.resumed) {
+      print("RESUMED");
+      arduino.then((sock) => client.get(
+          Uri.parse("http://${sock.address.address}/control?var=AWAKE&val=0")));
+    }
   }
 
   setConnect() {
@@ -68,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       arduino = connectTo(80, const Duration(seconds: 1));
-      arduino.then((socket) => socket.write("AWAKE\n"));
     });
   }
 
@@ -97,27 +115,39 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             ],
           ),
-          body: FutureBuilder<Socket>(
-            key: UniqueKey(),
-            future: arduino,
-            builder: (BuildContext context, AsyncSnapshot<Socket> snapshot) {
-              switch (snapshot.connectionState) {
-                case ConnectionState.waiting:
-                  return const CenteredCircularProgressIndicator();
-                default:
-                  if (!snapshot.hasData) {
-                    return const CenteredCircularProgressIndicator();
-                  } else {
-                    return Column(
-                      children: [
-                        const TextSection(),
-                        CameraSection(snapshot.data!),
-                        ButtonSection(snapshot.data!),
-                      ],
-                    );
+          body: Column(
+            children: [
+              FutureBuilder<Socket>(
+                key: UniqueKey(),
+                future: arduino,
+                builder:
+                    (BuildContext context, AsyncSnapshot<Socket> snapshot) {
+                  switch (snapshot.connectionState) {
+                    case ConnectionState.waiting:
+                      return const CenteredCircularProgressIndicator();
+                    default:
+                      if (!snapshot.hasData) {
+                        return const CenteredCircularProgressIndicator();
+                      } else {
+                        return Column(
+                          children: [
+                            const TextSection(),
+                            CameraSection(snapshot.data!),
+                            ButtonSection(snapshot.data!),
+                          ],
+                        );
+                      }
                   }
-              }
-            },
+                },
+              ),
+              const SizedBox(height: 25),
+              Center(
+                  child: ElevatedButton.icon(
+                onPressed: setConnect,
+                icon: const Icon(Icons.refresh),
+                label: const Text("Refresh"),
+              ))
+            ],
           )),
     );
   }
@@ -128,10 +158,12 @@ class CenteredCircularProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        backgroundColor: Colors.cyan,
-        strokeWidth: 5,
+    return const Expanded(
+      child: Center(
+        child: CircularProgressIndicator(
+          backgroundColor: Colors.cyan,
+          strokeWidth: 5,
+        ),
       ),
     );
   }
@@ -149,7 +181,7 @@ class TextSection extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              "Caméra",
+              "Camera",
               style: GoogleFonts.openSans(
                 color: Colors.black,
                 fontSize: 22,
